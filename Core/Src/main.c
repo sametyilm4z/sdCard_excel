@@ -22,6 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "stdio.h"
 #include "fatfs_sd.h"
 #include "string.h"
 
@@ -42,18 +43,25 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+RTC_HandleTypeDef hrtc;
+
 SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
 
 uint8_t dataWrite[10] = "1234567abc";
-
+uint8_t time;
+uint8_t date;
+uint8_t data[2];
+RTC_TimeTypeDef sTime;
+ RTC_DateTypeDef sDate;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_RTC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -99,13 +107,25 @@ int main(void)
   MX_GPIO_Init();
   MX_FATFS_Init();
   MX_SPI1_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
+/*
   fresult = f_mount(&fs, "", 1);
   fresult = f_open(&fil, "file5.csv", FA_CREATE_ALWAYS | FA_WRITE | FA_READ);
   //fresult = f_write(&fil, "test1 ,test2 ,test3 \n", 25, &bw);
   fresult = f_write(&fil, ("Test1;Test2;Test3\nTest4;Test5;Test6"), 35, &bw); //create the item in the excel
-  fresult = f_close(&fil);
+  fresult = f_close(&fil);*/
+
+  	  	  int i = 1;
+  	  	  fresult = f_mount(&fs, "", 1);
+  		  fresult = f_open(&fil, "Time.csv", FA_CREATE_ALWAYS | FA_WRITE | FA_READ);
+  		  fresult = f_write(&fil, ("Time;Date\n"), 15, &bw); //create the item in the excel
+  		  fresult = f_close(&fil);
+  		  fresult = f_open(&fil, "Time.csv", FA_OPEN_ALWAYS | FA_WRITE | FA_READ);
+  		  fresult = f_write(&fil, ("Time;Date\n"), 15, &bw); //create the item in the excel
+  		  fresult = f_close(&fil);
+
 
   /* USER CODE END 2 */
 
@@ -113,6 +133,24 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+/*	  HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+	  HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+	  time = sTime.Seconds;
+	  data[0] = time;
+	  data[1] = "\n";
+	  if (i==1){
+		  fresult = f_open(&fil, "Time.csv", FA_OPEN_ALWAYS | FA_WRITE | FA_READ);
+		  fresult = f_write(&fil, data, 2, &bw); //create the item in the excel
+		  fresult = f_close(&fil);
+	  }
+	  else{
+		  fresult = f_open(&fil, "Time.csv", FA_OPEN_ALWAYS | FA_WRITE | FA_READ);
+		  fresult = f_write(&fil, data, 2, &bw); //create the item in the excel
+		  fresult = f_close(&fil);
+
+	  }
+	  i++;
+	  HAL_Delay(1000);*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -128,13 +166,15 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
@@ -156,6 +196,75 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+  PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief RTC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RTC_Init(void)
+{
+
+  /* USER CODE BEGIN RTC_Init 0 */
+
+  /* USER CODE END RTC_Init 0 */
+
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
+
+  /* USER CODE BEGIN RTC_Init 1 */
+
+  /* USER CODE END RTC_Init 1 */
+
+  /** Initialize RTC Only
+  */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = 127;
+  hrtc.Init.SynchPrediv = 255;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE BEGIN Check_RTC_BKUP */
+
+  /* USER CODE END Check_RTC_BKUP */
+
+  /** Initialize RTC and set the Time and Date
+  */
+  sTime.Hours = 0x0;
+  sTime.Minutes = 0x0;
+  sTime.Seconds = 0x0;
+  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.Month = RTC_MONTH_JANUARY;
+  sDate.Date = 0x1;
+  sDate.Year = 0x0;
+
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RTC_Init 2 */
+
+  /* USER CODE END RTC_Init 2 */
+
 }
 
 /**
